@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Study Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F3EFE4;
+    --paper-dark:#E7E0CC;
+    --card:#FBF9F2;
+    --ink:#22283A;
+    --ink-soft:#5B6472;
+    --rule:#CBC2A4;
+    --rule-strong:#A79B72;
+    --rust:#B65C2E;
+    --rust-dim:#D8B79A;
+    --green:#3F6B4F;
+    --green-dim:#C7D8C9;
+    --maroon:#8C3B3B;
+    --gold:#B08A24;
+    --shadow: 0 1px 0 rgba(34,40,58,0.06), 0 8px 20px -12px rgba(34,40,58,0.25);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      repeating-linear-gradient(180deg, transparent, transparent 27px, var(--rule) 28px),
+      var(--paper);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+    padding-bottom:60px;
+  }
+  .app{max-width:760px;margin:0 auto;padding:36px 20px 20px;}
+  header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:22px;border-bottom:2px solid var(--ink);padding-bottom:14px;}
+  header .title{font-family:'Lora',serif;font-weight:700;font-size:1.9rem;letter-spacing:-0.01em;}
+  header .title .rupee{color:var(--gold);}
+  header .subtitle{font-size:0.78rem;color:var(--ink-soft);letter-spacing:.06em;text-transform:uppercase;margin-top:4px;}
+  .stamp-btn{
+    background:none;border:1.5px solid var(--ink);color:var(--ink);
+    font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:.05em;
+    padding:6px 10px;border-radius:3px;cursor:pointer;text-transform:uppercase;
+  }
+  .stamp-btn:hover{background:var(--ink);color:var(--paper);}
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--rule-strong);
+    border-radius:6px;
+    box-shadow:var(--shadow);
+    padding:22px;
+    margin-bottom:20px;
+    position:relative;
+  }
+  .card::before{
+    content:attr(data-label);
+    position:absolute;top:-9px;left:16px;background:var(--paper);
+    padding:0 8px;font-family:'IBM Plex Mono',monospace;font-size:0.65rem;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);
+  }
+
+  /* TIMER / SEAL */
+  .timer-card{display:flex;gap:26px;align-items:center;flex-wrap:wrap;}
+  .seal{
+    width:150px;height:150px;border-radius:50%;
+    border:3px solid var(--ink);
+    display:flex;align-items:center;justify-content:center;flex-direction:column;
+    position:relative;flex-shrink:0;
+    background:
+      radial-gradient(circle at 50% 50%, transparent 63%, var(--rust-dim) 64%, transparent 66%);
+  }
+  .seal.active{border-color:var(--rust);}
+  .seal .ticks{position:absolute;inset:0;}
+  .seal .ticks div{position:absolute;width:2px;height:8px;background:var(--rule-strong);left:50%;top:2px;transform-origin:1px 73px;}
+  .seal .time{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:1.28rem;}
+  .seal .subj{font-family:'Lora',serif;font-style:italic;font-size:0.72rem;color:var(--ink-soft);margin-top:3px;max-width:100px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .seal .earn{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--green);margin-top:2px;}
+
+  .timer-controls{flex:1;min-width:220px;}
+  .timer-controls .status{font-family:'Lora',serif;font-size:1rem;margin-bottom:12px;color:var(--ink-soft);}
+  .timer-controls .status b{color:var(--ink);font-style:italic;}
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .btn{
+    font-family:'Inter',sans-serif;font-weight:600;font-size:0.86rem;
+    padding:10px 16px;border-radius:5px;border:none;cursor:pointer;
+    transition:transform .08s ease;
+  }
+  .btn:active{transform:scale(0.97);}
+  .btn-primary{background:var(--ink);color:var(--paper);}
+  .btn-primary:hover{background:var(--rust);}
+  .btn-secondary{background:transparent;border:1.5px solid var(--ink-soft);color:var(--ink);}
+  .btn-secondary:hover{border-color:var(--ink);}
+  .btn-danger{background:transparent;border:1.5px solid var(--maroon);color:var(--maroon);}
+  .btn-danger:hover{background:var(--maroon);color:#fff;}
+  .btn-ghost{background:none;border:none;color:var(--ink-soft);text-decoration:underline;font-size:0.78rem;cursor:pointer;padding:2px 4px;}
+
+  /* STATS */
+  .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
+  .stat{background:var(--card);border:1px solid var(--rule-strong);border-radius:6px;padding:16px;box-shadow:var(--shadow);}
+  .stat .num{font-family:'IBM Plex Mono',monospace;font-size:1.5rem;font-weight:600;}
+  .stat .num.positive{color:var(--green);}
+  .stat .num.negative{color:var(--maroon);}
+  .stat .lbl{font-size:0.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);margin-top:4px;}
+
+  /* HEATMAP */
+  .heatmap-wrap{overflow-x:auto;}
+  table.heatmap{border-collapse:collapse;width:100%;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;}
+  table.heatmap th{text-align:center;font-weight:500;color:var(--ink-soft);padding:4px 6px;font-size:0.68rem;}
+  table.heatmap td.subj-name{font-family:'Lora',serif;font-style:italic;font-size:0.85rem;text-align:right;padding-right:10px;white-space:nowrap;color:var(--ink);}
+  table.heatmap td.cell{padding:3px;}
+  .swatch{width:26px;height:26px;border-radius:3px;margin:0 auto;border:1px solid var(--rule-strong);display:flex;align-items:center;justify-content:center;font-size:0.6rem;color:var(--ink-soft);}
+  .heatmap-empty{text-align:center;color:var(--ink-soft);font-style:italic;padding:20px 0;font-family:'Lora',serif;}
+  .heatmap-note{font-size:0.72rem;color:var(--ink-soft);margin-top:10px;font-style:italic;}
+
+  /* HISTORY */
+  .day-group{margin-bottom:16px;}
+  .day-head{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--rule);padding-bottom:5px;margin-bottom:8px;cursor:pointer;}
+  .day-head .date{font-family:'Lora',serif;font-weight:600;font-size:0.95rem;}
+  .day-head .totals{font-family:'IBM Plex Mono',monospace;font-size:0.78rem;color:var(--ink-soft);}
+  .entry{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:0.85rem;border-bottom:1px dashed var(--rule);}
+  .entry:last-child{border-bottom:none;}
+  .entry .left{display:flex;flex-direction:column;}
+  .entry .left .sub{font-family:'Lora',serif;font-style:italic;}
+  .entry .left .meta{font-size:0.68rem;color:var(--ink-soft);}
+  .entry .right{display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;}
+  .entry .right .amt.positive{color:var(--green);}
+  .entry .right .amt.negative{color:var(--maroon);}
+  .del-x{cursor:pointer;color:var(--ink-soft);font-size:0.78rem;}
+  .del-x:hover{color:var(--maroon);}
+  .empty-note{color:var(--ink-soft);font-style:italic;font-family:'Lora',serif;text-align:center;padding:12px 0;}
+
+  /* MODAL */
+  .overlay{position:fixed;inset:0;background:rgba(34,40,58,0.45);display:none;align-items:center;justify-content:center;z-index:50;padding:20px;}
+  .overlay.show{display:flex;}
+  .modal{background:var(--card);border:1px solid var(--ink);border-radius:8px;padding:24px;width:100%;max-width:340px;box-shadow:0 20px 40px -10px rgba(0,0,0,0.35);}
+  .modal h3{font-family:'Lora',serif;margin:0 0 14px;font-size:1.1rem;}
+  .modal input, .modal select{
+    width:100%;padding:9px 10px;border:1px solid var(--rule-strong);border-radius:4px;
+    font-family:'Inter',sans-serif;font-size:0.9rem;margin-bottom:12px;background:var(--paper);color:var(--ink);
+  }
+  .modal .modal-btns{display:flex;justify-content:flex-end;gap:8px;}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);
+    padding:9px 18px;border-radius:5px;font-size:0.82rem;font-family:'Inter',sans-serif;opacity:0;transition:opacity .3s;pointer-events:none;z-index:60;}
+  .toast.show{opacity:1;}
+
+  @media (max-width:520px){
+    .stats-row{grid-template-columns:1fr 1fr;}
+    .stats-row .stat:nth-child(3){grid-column:1/-1;}
+    .timer-card{justify-content:center;text-align:center;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <div>
+      <div class="title">Study Ledger<span class="rupee">.</span></div>
+      <div class="subtitle">time in, rupees out</div>
+    </div>
+    <button class="stamp-btn" id="notif-btn">Enable reminders</button>
+  </header>
+
+  <div class="card timer-card" data-label="Session">
+    <div class="seal" id="seal">
+      <div class="ticks" id="ticks"></div>
+      <div class="time" id="seal-time">00:00:00</div>
+      <div class="subj" id="seal-subj">idle</div>
+      <div class="earn" id="seal-earn"></div>
+    </div>
+    <div class="timer-controls">
+      <div class="status" id="status-line">No session running. Start one to begin tracking.</div>
+      <div class="btn-row" id="btn-row">
+        <button class="btn btn-primary" id="start-btn">Start studying</button>
+        <button class="btn btn-secondary" id="expense-btn">Log spending</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat">
+      <div class="num" id="stat-balance">₹0</div>
+      <div class="lbl">Balance</div>
+    </div>
+    <div class="stat">
+      <div class="num" id="stat-today">0h 0m</div>
+      <div class="lbl">Studied today</div>
+    </div>
+    <div class="stat">
+      <div class="num" id="stat-week">0h 0m</div>
+      <div class="lbl">Studied this week</div>
+    </div>
+  </div>
+
+  <div class="card" data-label="Weekly heatmap">
+    <div class="heatmap-wrap" id="heatmap-wrap"></div>
+    <div class="heatmap-note">Blank cells mean you didn't touch that subject that day — catch up.</div>
+  </div>
+
+  <div class="card" data-label="History">
+    <div id="history-wrap"></div>
+  </div>
+</div>
+
+<!-- Subject Modal -->
+<div class="overlay" id="subject-overlay">
+  <div class="modal">
+    <h3 id="subject-modal-title">What are you studying?</h3>
+    <input type="text" id="subject-input" placeholder="e.g. Organic Chemistry" autocomplete="off">
+    <div class="modal-btns">
+      <button class="btn btn-secondary" id="subject-cancel">Cancel</button>
+      <button class="btn btn-primary" id="subject-confirm">Start</button>
+    </div>
+  </div>
+</div>
+
+<!-- Expense Modal -->
+<div class="overlay" id="expense-overlay">
+  <div class="modal">
+    <h3>Log spending</h3>
+    <input type="number" id="expense-amount" placeholder="Amount (₹)" min="0" step="0.5">
+    <input type="text" id="expense-note" placeholder="What on? (optional)" autocomplete="off">
+    <div class="modal-btns">
+      <button class="btn btn-secondary" id="expense-cancel">Cancel</button>
+      <button class="btn btn-primary" id="expense-confirm">Subtract</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- CONFIG ---------- */
+const RATE_PER_HOUR = 10; // rupees earned per hour studied
+const PING_INTERVAL_MS = 60 * 60 * 1000; // ping every hour
+const STORAGE_KEY = 'studyLedgerData_v1';
+
+/* ---------- STATE ---------- */
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return { sessions: [], expenses: [], active: null };
+}
+function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+let state = loadState();
+
+/* ---------- HELPERS ---------- */
+function fmtMoney(n){
+  const sign = n < 0 ? '-' : '';
+  return sign + '₹' + Math.abs(n).toFixed(2).replace(/\.00$/,'');
+}
+function fmtDuration(ms){
+  const totalSec = Math.floor(ms/1000);
+  const h = Math.floor(totalSec/3600);
+  const m = Math.floor((totalSec%3600)/60);
+  const s = totalSec%60;
+  return [h,m,s].map(v=>String(v).padStart(2,'0')).join(':');
+}
+function fmtHM(ms){
+  const totalMin = Math.round(ms/60000);
+  const h = Math.floor(totalMin/60);
+  const m = totalMin%60;
+  return h+'h '+m+'m';
+}
+function dateKey(ts){
+  const d = new Date(ts);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function niceDate(key){
+  const d = new Date(key+'T00:00:00');
+  const today = dateKey(Date.now());
+  const yestKey = dateKey(Date.now() - 86400000);
+  if(key===today) return 'Today';
+  if(key===yestKey) return 'Yesterday';
+  return d.toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
+}
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._tm);
+  toast._tm = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+/* ---------- AUDIO PING ---------- */
+function playBeep(){
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    [0,0.22,0.44].forEach((t,i)=>{
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type='sine';
+      o.frequency.value = i===1?880:660;
+      g.gain.value=0.0001;
+      o.connect(g); g.connect(ctx.destination);
+      const start = ctx.currentTime + t;
+      g.gain.setValueAtTime(0.0001, start);
+      g.gain.exponentialRampToValueAtTime(0.15, start+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, start+0.2);
+      o.start(start); o.stop(start+0.22);
+    });
+  }catch(e){}
+}
+
+/* ---------- NOTIFICATIONS ---------- */
+const notifBtn = document.getElementById('notif-btn');
+function updateNotifBtn(){
+  if(!('Notification' in window)){ notifBtn.style.display='none'; return; }
+  notifBtn.textContent = Notification.permission==='granted' ? 'Reminders on' : 'Enable reminders';
+}
+notifBtn.addEventListener('click', ()=>{
+  if('Notification' in window) Notification.requestPermission().then(updateNotifBtn);
+});
+updateNotifBtn();
+function pingHourUp(){
+  playBeep();
+  if('Notification' in window && Notification.permission==='granted'){
+    try{ new Notification('An hour is up', { body: 'Switch subjects, or keep going with '+ (state.active? state.active.subject : 'this one') +'.' }); }catch(e){}
+  }
+  toast('⏰ An hour is up — switch subjects?');
+}
+
+/* ---------- SESSION LOGIC ---------- */
+function startSession(subject){
+  state.active = { subject: subject.trim() || 'Untitled', startTs: Date.now(), lastPingIdx: 0 };
+  saveState();
+  render();
+}
+function finalizeActive(){
+  if(!state.active) return null;
+  const endTs = Date.now();
+  const durationMs = endTs - state.active.startTs;
+  const session = {
+    id: uid(),
+    subject: state.active.subject,
+    startTs: state.active.startTs,
+    endTs,
+    durationMs,
+    earned: (durationMs/3600000)*RATE_PER_HOUR
+  };
+  if(durationMs > 3000){ // ignore accidental sub-3-second sessions
+    state.sessions.push(session);
+  }
+  state.active = null;
+  saveState();
+  return session;
+}
+function stopSession(){
+  const s = finalizeActive();
+  render();
+  if(s) toast('Saved '+fmtDuration(s.durationMs)+' on '+s.subject+' — earned '+fmtMoney(s.earned));
+}
+function switchSubject(newSubject){
+  const s = finalizeActive();
+  startSession(newSubject);
+  if(s) toast('Logged '+fmtDuration(s.durationMs)+' on '+s.subject);
+}
+
+/* ---------- EXPENSE LOGIC ---------- */
+function addExpense(amount, note){
+  state.expenses.push({ id: uid(), ts: Date.now(), amount, note: note.trim() });
+  saveState();
+  render();
+  toast('Subtracted '+fmtMoney(amount)+(note?(' — '+note):''));
+}
+
+/* ---------- DELETE ---------- */
+function deleteSession(id){
+  state.sessions = state.sessions.filter(s=>s.id!==id);
+  saveState(); render();
+}
+function deleteExpense(id){
+  state.expenses = state.expenses.filter(e=>e.id!==id);
+  saveState(); render();
+}
+
+/* ---------- MODALS ---------- */
+const subjectOverlay = document.getElementById('subject-overlay');
+const subjectInput = document.getElementById('subject-input');
+const subjectTitle = document.getElementById('subject-modal-title');
+let subjectModalMode = 'start'; // 'start' | 'switch'
+
+function openSubjectModal(mode){
+  subjectModalMode = mode;
+  subjectTitle.textContent = mode==='switch' ? "What's next?" : 'What are you studying?';
+  subjectInput.value = '';
+  subjectOverlay.classList.add('show');
+  setTimeout(()=>subjectInput.focus(), 50);
+}
+document.getElementById('start-btn').addEventListener('click', ()=>openSubjectModal('start'));
+document.getElementById('subject-cancel').addEventListener('click', ()=>subjectOverlay.classList.remove('show'));
+document.getElementById('subject-confirm').addEventListener('click', confirmSubject);
+subjectInput.addEventListener('keydown', e=>{ if(e.key==='Enter') confirmSubject(); });
+function confirmSubject(){
+  const val = subjectInput.value.trim();
+  if(!val){ subjectInput.focus(); return; }
+  subjectOverlay.classList.remove('show');
+  if(subjectModalMode==='switch') switchSubject(val);
+  else startSession(val);
+}
+
+const expenseOverlay = document.getElementById('expense-overlay');
+document.getElementById('expense-btn').addEventListener('click', ()=>{
+  document.getElementById('expense-amount').value='';
+  document.getElementById('expense-note').value='';
+  expenseOverlay.classList.add('show');
+  setTimeout(()=>document.getElementById('expense-amount').focus(),50);
+});
+document.getElementById('expense-cancel').addEventListener('click', ()=>expenseOverlay.classList.remove('show'));
+document.getElementById('expense-confirm').addEventListener('click', ()=>{
+  const amt = parseFloat(document.getElementById('expense-amount').value);
+  const note = document.getElementById('expense-note').value;
+  if(!amt || amt<=0) return;
+  expenseOverlay.classList.remove('show');
+  addExpense(amt, note);
+});
+
+/* ---------- SEAL TICKS (12 marks) ---------- */
+const ticksEl = document.getElementById('ticks');
+for(let i=0;i<12;i++){
+  const d = document.createElement('div');
+  d.style.transform = 'rotate('+(i*30)+'deg)';
+  ticksEl.appendChild(d);
+}
+
+/* ---------- RENDER ---------- */
+function computeBalance(){
+  const earned = state.sessions.reduce((a,s)=>a+s.earned,0);
+  const spent = state.expenses.reduce((a,e)=>a+e.amount,0);
+  return earned - spent;
+}
+function msStudiedBetween(fromTs, toTs){
+  let total = 0;
+  state.sessions.forEach(s=>{
+    if(s.endTs > fromTs && s.startTs < toTs){
+      total += Math.min(s.endTs,toTs) - Math.max(s.startTs,fromTs);
+    }
+  });
+  if(state.active && state.active.startTs < toTs){
+    const end = Math.min(Date.now(), toTs);
+    if(end > Math.max(state.active.startTs, fromTs)){
+      total += end - Math.max(state.active.startTs, fromTs);
+    }
+  }
+  return total;
+}
+function startOfDay(ts){ const d=new Date(ts); d.setHours(0,0,0,0); return d.getTime(); }
+function startOfWeek(ts){ // Monday start
+  const d=new Date(ts); const day=(d.getDay()+6)%7; d.setHours(0,0,0,0); d.setDate(d.getDate()-day); return d.getTime();
+}
+
+function render(){
+  renderTimer();
+  renderStats();
+  renderHeatmap();
+  renderHistory();
+}
+
+function renderTimer(){
+  const seal = document.getElementById('seal');
+  const timeEl = document.getElementById('seal-time');
+  const subjEl = document.getElementById('seal-subj');
+  const earnEl = document.getElementById('seal-earn');
+  const statusLine = document.getElementById('status-line');
+  const btnRow = document.getElementById('btn-row');
+
+  if(state.active){
+    seal.classList.add('active');
+    const elapsed = Date.now() - state.active.startTs;
+    timeEl.textContent = fmtDuration(elapsed);
+    subjEl.textContent = state.active.subject;
+    earnEl.textContent = fmtMoney((elapsed/3600000)*RATE_PER_HOUR)+' so far';
+    statusLine.innerHTML = 'Studying <b>'+escapeHtml(state.active.subject)+'</b> — pings you every hour.';
+    btnRow.innerHTML = '';
+    const switchBtn = document.createElement('button');
+    switchBtn.className='btn btn-primary'; switchBtn.textContent='Switch subject';
+    switchBtn.onclick = ()=>openSubjectModal('switch');
+    const stopBtn = document.createElement('button');
+    stopBtn.className='btn btn-danger'; stopBtn.textContent='Stop & save';
+    stopBtn.onclick = stopSession;
+    const expBtn = document.createElement('button');
+    expBtn.className='btn btn-secondary'; expBtn.textContent='Log spending';
+    expBtn.onclick = ()=>document.getElementById('expense-btn').click();
+    btnRow.appendChild(switchBtn); btnRow.appendChild(stopBtn); btnRow.appendChild(expBtn);
+  } else {
+    seal.classList.remove('active');
+    timeEl.textContent = '00:00:00';
+    subjEl.textContent = 'idle';
+    earnEl.textContent = '';
+    statusLine.textContent = 'No session running. Start one to begin tracking.';
+    btnRow.innerHTML = '';
+    const startBtn = document.createElement('button');
+    startBtn.className='btn btn-primary'; startBtn.textContent='Start studying';
+    startBtn.onclick = ()=>openSubjectModal('start');
+    const expBtn = document.createElement('button');
+    expBtn.className='btn btn-secondary'; expBtn.textContent='Log spending';
+    expBtn.onclick = ()=>document.getElementById('expense-btn').click();
+    btnRow.appendChild(startBtn); btnRow.appendChild(expBtn);
+  }
+}
+
+function renderStats(){
+  const balance = computeBalance();
+  const balEl = document.getElementById('stat-balance');
+  balEl.textContent = fmtMoney(balance);
+  balEl.className = 'num ' + (balance<0?'negative':'positive');
+
+  const dayStart = startOfDay(Date.now());
+  const weekStart = startOfWeek(Date.now());
+  document.getElementById('stat-today').textContent = fmtHM(msStudiedBetween(dayStart, Date.now()+1));
+  document.getElementById('stat-week').textContent = fmtHM(msStudiedBetween(weekStart, Date.now()+1));
+}
+
+function renderHeatmap(){
+  const wrap = document.getElementById('heatmap-wrap');
+  const subjects = Array.from(new Set(state.sessions.map(s=>s.subject)));
+  if(state.active) subjects.includes(state.active.subject) || subjects.push(state.active.subject);
+
+  if(subjects.length===0){
+    wrap.innerHTML = '<div class="heatmap-empty">Study something to start filling this in.</div>';
+    return;
+  }
+  // order subjects by total time desc
+  subjects.sort((a,b)=>{
+    const ta = state.sessions.filter(s=>s.subject===a).reduce((x,s)=>x+s.durationMs,0);
+    const tb = state.sessions.filter(s=>s.subject===b).reduce((x,s)=>x+s.durationMs,0);
+    return tb-ta;
+  });
+
+  // last 7 days, oldest to newest
+  const days = [];
+  for(let i=6;i>=0;i--){
+    const ts = startOfDay(Date.now()) - i*86400000;
+    days.push(ts);
+  }
+
+  let html = '<table class="heatmap"><thead><tr><th></th>';
+  days.forEach(ts=>{
+    const d = new Date(ts);
+    html += '<th>'+d.toLocaleDateString(undefined,{weekday:'short'})+'</th>';
+  });
+  html += '</tr></thead><tbody>';
+
+  subjects.forEach(subj=>{
+    html += '<tr><td class="subj-name">'+escapeHtml(subj)+'</td>';
+    days.forEach(ts=>{
+      const dayEnd = ts + 86400000;
+      let ms = 0;
+      state.sessions.forEach(s=>{
+        if(s.subject===subj && s.endTs>ts && s.startTs<dayEnd){
+          ms += Math.min(s.endTs,dayEnd) - Math.max(s.startTs,ts);
+        }
+      });
+      if(state.active && state.active.subject===subj && state.active.startTs<dayEnd){
+        const end = Math.min(Date.now(), dayEnd);
+        if(end>Math.max(state.active.startTs,ts)) ms += end - Math.max(state.active.startTs,ts);
+      }
+      const hrs = ms/3600000;
+      const alpha = hrs<=0 ? 0 : Math.min(0.18 + hrs*0.28, 1);
+      const bg = hrs<=0 ? 'transparent' : 'rgba(63,107,79,'+alpha.toFixed(2)+')';
+      const label = hrs<=0 ? '' : (hrs>=1 ? hrs.toFixed(1)+'h' : Math.round(hrs*60)+'m');
+      html += '<td class="cell"><div class="swatch" style="background:'+bg+'">'+label+'</div></td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+function renderHistory(){
+  const wrap = document.getElementById('history-wrap');
+  const byDay = {};
+  state.sessions.forEach(s=>{
+    const k = dateKey(s.startTs);
+    (byDay[k]=byDay[k]||{sessions:[],expenses:[]}).sessions.push(s);
+  });
+  state.expenses.forEach(e=>{
+    const k = dateKey(e.ts);
+    (byDay[k]=byDay[k]||{sessions:[],expenses:[]}).expenses.push(e);
+  });
+  const keys = Object.keys(byDay).sort((a,b)=>b.localeCompare(a));
+  if(keys.length===0){
+    wrap.innerHTML = '<div class="empty-note">Nothing logged yet. Your first session will show up here.</div>';
+    return;
+  }
+  let html = '';
+  keys.forEach(k=>{
+    const day = byDay[k];
+    const earned = day.sessions.reduce((a,s)=>a+s.earned,0);
+    const spent = day.expenses.reduce((a,e)=>a+e.amount,0);
+    const net = earned - spent;
+    html += '<div class="day-group">';
+    html += '<div class="day-head"><span class="date">'+niceDate(k)+'</span><span class="totals">'+fmtMoney(net)+'</span></div>';
+    day.sessions.sort((a,b)=>b.startTs-a.startTs).forEach(s=>{
+      html += '<div class="entry"><div class="left"><span class="sub">'+escapeHtml(s.subject)+'</span>'+
+        '<span class="meta">'+fmtDuration(s.durationMs)+' · '+new Date(s.startTs).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+'</span></div>'+
+        '<div class="right"><span class="amt positive">+'+fmtMoney(s.earned)+'</span><span class="del-x" data-del-session="'+s.id+'">✕</span></div></div>';
+    });
+    day.expenses.sort((a,b)=>b.ts-a.ts).forEach(e=>{
+      html += '<div class="entry"><div class="left"><span class="sub">'+(e.note?escapeHtml(e.note):'Spending')+'</span>'+
+        '<span class="meta">'+new Date(e.ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+'</span></div>'+
+        '<div class="right"><span class="amt negative">-'+fmtMoney(e.amount)+'</span><span class="del-x" data-del-expense="'+e.id+'">✕</span></div></div>';
+    });
+    html += '</div>';
+  });
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('[data-del-session]').forEach(el=>{
+    el.addEventListener('click', ()=>{ if(confirm('Delete this session?')) deleteSession(el.dataset.delSession); });
+  });
+  wrap.querySelectorAll('[data-del-expense]').forEach(el=>{
+    el.addEventListener('click', ()=>{ if(confirm('Delete this expense?')) deleteExpense(el.dataset.delExpense); });
+  });
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+/* ---------- TICK LOOP ---------- */
+setInterval(()=>{
+  if(state.active){
+    const elapsed = Date.now() - state.active.startTs;
+    document.getElementById('seal-time').textContent = fmtDuration(elapsed);
+    document.getElementById('seal-earn').textContent = fmtMoney((elapsed/3600000)*RATE_PER_HOUR)+' so far';
+    const idx = Math.floor(elapsed/PING_INTERVAL_MS);
+    if(idx > state.active.lastPingIdx){
+      state.active.lastPingIdx = idx;
+      saveState();
+      pingHourUp();
+    }
+    // lightweight live-update of today/week stats & heatmap current-day cell without full re-render cost
+    renderStats();
+  }
+}, 1000);
+
+// re-render heatmap/history occasionally in case day rolls over while open
+setInterval(()=>{ renderHeatmap(); }, 60000);
+
+/* warn before closing tab mid-session */
+window.addEventListener('beforeunload', (e)=>{
+  if(state.active){
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+/* ---------- INIT ---------- */
+render();
+</script>
+</body>
+</html>
