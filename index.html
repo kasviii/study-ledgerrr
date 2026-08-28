@@ -406,12 +406,13 @@ function confirmSubject(){
 }
 
 const expenseOverlay = document.getElementById('expense-overlay');
-document.getElementById('expense-btn').addEventListener('click', ()=>{
+function openExpenseModal(){
   document.getElementById('expense-amount').value='';
   document.getElementById('expense-note').value='';
   expenseOverlay.classList.add('show');
   setTimeout(()=>document.getElementById('expense-amount').focus(),50);
-});
+}
+document.getElementById('expense-btn').addEventListener('click', openExpenseModal);
 document.getElementById('expense-cancel').addEventListener('click', ()=>expenseOverlay.classList.remove('show'));
 document.getElementById('expense-confirm').addEventListener('click', ()=>{
   const amt = parseFloat(document.getElementById('expense-amount').value);
@@ -486,7 +487,7 @@ function renderTimer(){
     stopBtn.onclick = stopSession;
     const expBtn = document.createElement('button');
     expBtn.className='btn btn-secondary'; expBtn.textContent='Log spending';
-    expBtn.onclick = ()=>document.getElementById('expense-btn').click();
+    expBtn.onclick = openExpenseModal;
     btnRow.appendChild(switchBtn); btnRow.appendChild(stopBtn); btnRow.appendChild(expBtn);
   } else {
     seal.classList.remove('active');
@@ -500,7 +501,7 @@ function renderTimer(){
     startBtn.onclick = ()=>openSubjectModal('start');
     const expBtn = document.createElement('button');
     expBtn.className='btn btn-secondary'; expBtn.textContent='Log spending';
-    expBtn.onclick = ()=>document.getElementById('expense-btn').click();
+    expBtn.onclick = openExpenseModal;
     btnRow.appendChild(startBtn); btnRow.appendChild(expBtn);
   }
 }
